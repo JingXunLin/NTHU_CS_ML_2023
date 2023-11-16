@@ -228,7 +228,6 @@ class TetrisGame:
                     return "start"#starting the game
                 #making the game look pretty
             elif buttons[0].collidepoint(mpos):
-                self.renderer.drawByName("startbutton", 319, 207)
                 self.renderer.drawByName("setmapbutton", 325, 274)
             elif buttons[1].collidepoint(mpos):
                 self.renderer.drawByName("helpbutton", 325, 317)
@@ -263,7 +262,7 @@ class TetrisGameDouble(TetrisGame):
         #different maps = differnet grids
                
         pygame.init() #for music
-        battlemusic = pygame.mixer.Sound(MUSIC_PATH)#importing sound file
+        #battlemusic = pygame.mixer.Sound(MUSIC_PATH)#importing sound file
 
         #SCREEN=pygame.display.set_mode((800,600))
         running = True #necessity
@@ -455,8 +454,8 @@ class TetrisGameSingle(TetrisGame):
         #different maps = differnet grids
 
         pygame.init() #for music
-
-        battlemusic = pygame.mixer.Sound(MUSIC_PATH)#importing sound file
+        #battlemusic = pygame.mixer.Sound(MUSIC_PATH)#importing sound file
+        
         #SCREEN=pygame.display.set_mode((800,600))
         running = True #necessity
         self.renderer.drawByName("gamescreen", 0, 0)
