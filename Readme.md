@@ -77,15 +77,15 @@ This work is based on the following repos: <br/>
 Yi-Lin Sung, r06942076@ntu.edu.tw
 
 ## **規則**
-遊戲結束(跳出main loop)方式: <br/>
+### 遊戲結束(跳出main loop)方式: <br/>
 1. 按下右上叉叉(evnt.type == pygame.QUIT)
 2. 有人死亡(堆疊方塊觸頂)
-3. 計時結束後 <br/>
-勝負: <br/>
+3. 計時結束後
+### 勝負: <br/>
 1. 若有人死，死者敗
 2. 比誰的send lines多
-3. 比誰頂層較低 <br/>
-send line計算方式: <br/>
+3. 比誰頂層較低
+### send line計算方式: <br/>
 1. cleared: <br/>
 即消去的行數， <br/>
 2行: +1分 <br/>
