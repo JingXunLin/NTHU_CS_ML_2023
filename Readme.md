@@ -80,23 +80,23 @@ Yi-Lin Sung, r06942076@ntu.edu.tw
 遊戲結束(跳出main loop)方式: <br/>
 1. 按下右上叉叉(evnt.type == pygame.QUIT)
 2. 有人死亡(堆疊方塊觸頂)
-3. 計時結束後
+3. 計時結束後 <br/>
 勝負: <br/>
 1. 若有人死，死者敗
 2. 比誰的send lines多
-3. 比誰頂層較低
+3. 比誰頂層較低 <br/>
 send line計算方式: <br/>
 1. cleared: <br/>
-即消去的行數，
-2行: +1分
-3行: +2分
-4行: +4分 (Tetris)
+即消去的行數， <br/>
+2行: +1分 <br/>
+3行: +2分 <br/>
+4行: +4分 (Tetris) <br/>
 2. combo: <br/>
-即連續幾次每次有消行，
-+(combo+1)/2分 (最多4分)
+即連續幾次每次有消行， <br/>
++(combo+1)/2分 (最多4分) <br/>
 3. T-spin: <br/>
-用T型最後選轉卡入縫隙並消除兩行
-+3分
+用T型最後選轉卡入縫隙並消除兩行 <br/>
++3分 <br/>
 4. back to back: <br/>
-兩次相鄰的消去均為"Tetris"或"T-spin"
-+2分
+兩次相鄰的消去均為"Tetris"或"T-spin" <br/>
++2分 <br/>
