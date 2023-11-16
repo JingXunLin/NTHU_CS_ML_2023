@@ -86,17 +86,17 @@ Yi-Lin Sung, r06942076@ntu.edu.tw
 2. 比誰的send lines多
 3. 比誰頂層較低
 ### send line計算方式: <br/>
-1. cleared: <br/>
+**1. cleared:** <br/>
 即消去的行數， <br/>
 2行: +1分 <br/>
 3行: +2分 <br/>
 4行: +4分 (Tetris) <br/>
-2. combo: <br/>
+**2. combo:** <br/>
 即連續幾次每次有消行， <br/>
 +(combo+1)/2分 (最多4分) <br/>
-3. T-spin: <br/>
+**3. T-spin:** <br/>
 用T型最後選轉卡入縫隙並消除兩行 <br/>
 +3分 <br/>
-4. back to back: <br/>
+**4. back to back:** <br/>
 兩次相鄰的消去均為"Tetris"或"T-spin" <br/>
 +2分 <br/>
