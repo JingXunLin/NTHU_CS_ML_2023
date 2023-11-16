@@ -184,7 +184,7 @@ class TetrisInterface(abc.ABC):
         grid_2.fill(0) # since only one player
         grid = np.concatenate([grid_1, grid_2], axis=1)
 
-        return grid.reshape(grid.shape[0], grid.shape[1], 1)
+        return grid
         # return self.tetris_list[self.now_player]["tetris"].get_grid().reshape(GRID_DEPTH, GRID_WIDTH, 1)
 
     def get_obs(self):
