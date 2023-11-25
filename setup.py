@@ -1,8 +1,8 @@
 # coding:utf8
 from setuptools import setup, find_packages
 
-with open("Readme.md", "r") as fh:
-    long_description = fh.read()
+#with open("Readme.md", "r") as fh:
+#    long_description = fh.read()
 
 setup(
     name='TetrisBattle',             
