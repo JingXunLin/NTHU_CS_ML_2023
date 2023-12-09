@@ -7,6 +7,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.distributions import Categorical
 from tqdm.notebook import tqdm
+from  collections import deque
 
 
 class ActorNetwork(nn.Module):
@@ -152,6 +153,7 @@ agent.actor.train()  # Switch network into training mode
 agent.critic.train()
 EPISODE_PER_BATCH = 6
 NUM_BATCH = 300 
+replay_time = 16
 
 avg_total_rewards= []
 for batch in range(NUM_BATCH):
@@ -162,6 +164,7 @@ for batch in range(NUM_BATCH):
     # collect trajectory
     have_clear = 0
     last_scores = 1
+    replay = deque()
 
     for episode in range(EPISODE_PER_BATCH):
         state = env.reset()
@@ -182,7 +185,18 @@ for batch in range(NUM_BATCH):
 
             next_state = np.expand_dims(next_state[:,:10], axis=0)
             log_probs.append(log_prob) # [log(a1|s1), log(a2|s2), ...., log(at|st)]
-            values.append(agent.critic(torch.FloatTensor(state)))
+            cur_value = agent.critic(torch.FloatTensor(state))
+            values.append(cur_value)
+            
+            # Add cleared experience to replay buffer
+            if _['is_fallen'] and _['cleared'] > 0:
+                replay.append((state, reward, log_prob, cur_value))
+                if len(replay) > 1:
+                    # Train on replay buffer
+                    for _ in range(replay_time):
+                        state_, reward_, log_prob_, value_ = replay[np.random.randint(0, len(replay))]
+                        agent.learn(log_prob_, reward_, value_)
+            
             state = next_state
 
             total_reward += reward

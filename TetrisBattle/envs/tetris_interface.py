@@ -324,11 +324,11 @@ class TetrisSingleInterface(TetrisInterface):
             # additional_reward = 0.01 if infos['holes'] == 0 else 0
             # additional_reward = - infos['holes']**2
             # additional_reward = -0.51 * infos['height_sum'] + 0.76 * infos['cleared'] - 0.36 * infos['holes'] - 0.18 * infos['diff_sum']
-            # additional_reward = 3 * infos['cleared'] - 0.8 * infos['holes'] - 0.62 * infos['diff_sum']  + 2.2*infos['sum_width'] # good initial
+            additional_reward = 3 * infos['cleared'] - 0.8 * infos['holes'] - 0.62 * infos['diff_sum']  + 2.2*infos['sum_width'] # good initial
             # additional_reward = - 1.5 * infos['holes'] - 0.6 * infos['diff_sum']  + 2*infos['sum_width'] - infos['max_height']# good initial
             # additional_reward = infos['cleared'] # + (0.2 if infos['holes'] == 0 else 0)
-            return basic_reward
-            # return basic_reward + 1 * additional_reward + infos['reward_notdie']
+            # return basic_reward
+            return basic_reward + 1 * additional_reward
         return 0
 
 
