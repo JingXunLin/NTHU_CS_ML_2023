@@ -251,6 +251,8 @@ class TetrisInterface(abc.ABC):
                            'diff_sum': 0,
                            'max_height': 0,
                            'holes': 0,
+                           'drop_block_cnt' : 0,
+                           'sum_width' : 0,
                            'n_used_block': 0}
     
         for i, player in enumerate(self.tetris_list):
@@ -294,7 +296,7 @@ class TetrisSingleInterface(TetrisInterface):
     def __init__(self, gridchoice="none", obs_type="image", mode="rgb_array"):
         super(TetrisSingleInterface, self).__init__(gridchoice, obs_type, mode)
         self.num_players = 1
-
+        
         # The second player is dummy, it is used for 
         # self.renderer.drawByName("transparent", *opponent["pos"]["transparent"]) at around line 339
         for i in range(self.num_players + 1):
@@ -320,13 +322,13 @@ class TetrisSingleInterface(TetrisInterface):
         if infos['is_fallen']:
             basic_reward = infos['scores']
             # additional_reward = 0.01 if infos['holes'] == 0 else 0
-
+            # additional_reward = - infos['holes']**2
             # additional_reward = -0.51 * infos['height_sum'] + 0.76 * infos['cleared'] - 0.36 * infos['holes'] - 0.18 * infos['diff_sum']
-            additional_reward = 0.76 * infos['cleared'] - 0.36 * infos['holes'] - 0.18 * infos['diff_sum']
+            # additional_reward = 3 * infos['cleared'] - 0.8 * infos['holes'] - 0.62 * infos['diff_sum']  + 2.2*infos['sum_width'] # good initial
+            # additional_reward = - 1.5 * infos['holes'] - 0.6 * infos['diff_sum']  + 2*infos['sum_width'] - infos['max_height']# good initial
             # additional_reward = infos['cleared'] # + (0.2 if infos['holes'] == 0 else 0)
-            # return basic_reward + 0.01 * additional_reward - infos['penalty']
-            return basic_reward + 1 * additional_reward + infos['reward_notdie']
-        
+            return basic_reward
+            # return basic_reward + 1 * additional_reward + infos['reward_notdie']
         return 0
 
 
@@ -386,7 +388,7 @@ class TetrisSingleInterface(TetrisInterface):
             scores = tetris.clear()
 
             # scores += cleared_scores
-            # scores += tetris.cleared
+            scores += tetris.cleared**2 * 100
 
             self.renderer.drawCombo(tetris, pos["combo"][0], pos["combo"][1])
 
@@ -405,8 +407,8 @@ class TetrisSingleInterface(TetrisInterface):
                 # screen.blit(kos[tetris_2.get_KO() - 1], (426, 235))
                 pygame.display.flip()
 
-                # scores -= 5
-                penalty_die = self.total_reward * 0.8
+                scores -= 5
+                penalty_die = -2
 
                 end = 1
 
@@ -437,7 +439,7 @@ class TetrisSingleInterface(TetrisInterface):
         self.time = self.update_time(self.time)
 
         if self.time == 0:
-            reward_notdie = 0.3 * self.total_reward
+            reward_notdie = 1
             end = 1
 
         self.renderer.drawTime2p(self.time)
@@ -453,13 +455,15 @@ class TetrisSingleInterface(TetrisInterface):
         infos = {'is_fallen': tetris.is_fallen}
 
         if tetris.is_fallen:
-            height_sum, diff_sum, max_height, holes = get_infos(tetris.get_board())
+            height_sum, diff_sum, max_height, holes, drop_block_cnt, sum_width = get_infos(tetris.get_board())
 
             # store the different of each information due to the move
             infos['height_sum'] = height_sum - self.last_infos['height_sum'] - 4
             infos['diff_sum'] =  diff_sum - self.last_infos['diff_sum']
             infos['max_height'] =  max_height - self.last_infos['max_height']
             infos['holes'] =  holes - self.last_infos['holes'] 
+            infos['drop_block_cnt'] = drop_block_cnt - self.last_infos['drop_block_cnt'] 
+            infos['sum_width'] = sum_width - self.last_infos['sum_width'] 
             infos['n_used_block'] =  tetris.n_used_block - self.last_infos['n_used_block']
             infos['is_fallen'] =  tetris.is_fallen 
             infos['scores'] =  scores 
@@ -471,6 +475,8 @@ class TetrisSingleInterface(TetrisInterface):
                                'diff_sum': diff_sum,
                                'max_height': max_height,
                                'holes': holes,
+                               'drop_block_cnt' : drop_block_cnt,
+                               'sum_width' : sum_width,
                                'n_used_block': tetris.n_used_block}
                                
 

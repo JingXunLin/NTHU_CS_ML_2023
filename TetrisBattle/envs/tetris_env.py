@@ -168,11 +168,9 @@ if __name__ == "__main__":
         # else:
         #     action = 0
         ob, reward, done, infos = env.step(action)
-        print(ob.shape)
+        # print(ob.shape)
         # print(ob)
         # print(reward)
-        if len(infos) != 0:
-            print(infos)
         
         # im = Image.fromarray(ob)
         # im.save("samples/%d.png" % i)

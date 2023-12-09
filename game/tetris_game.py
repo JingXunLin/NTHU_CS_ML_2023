@@ -524,7 +524,7 @@ class TetrisGameSingle(TetrisGame):
             infos = {'is_fallen': tetris.is_fallen}
 
             if tetris.is_fallen:
-                height_sum, diff_sum, max_height, holes = get_infos(tetris.get_board())
+                height_sum, diff_sum, max_height, holes, drop_block_cnt, sum_width = get_infos(tetris.get_board())
 
                 # store the different of each information due to the move
                 infos['height_sum'] = height_sum - self.last_infos['height_sum']

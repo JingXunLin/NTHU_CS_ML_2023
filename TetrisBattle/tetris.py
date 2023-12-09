@@ -245,7 +245,7 @@ def hold(block, held, _buffer):
     # the piece switches with the held piece     
     else:
         block, held = held, block
-        
+
     return [block, held]
 
 def freeze(last_time):
@@ -253,6 +253,7 @@ def freeze(last_time):
     while t.time() - start < last_time:
         pass
 
+drop_block_cnt = 0
 def get_infos(board):
     # board is equal to grid
 
@@ -271,13 +272,32 @@ def get_infos(board):
             if int(board[i][j]) > 0:  # Is the cell occupied?
                 heights[i] = len(board[0]) - j  # Store the height value
                 break
-
+    max_height = max(heights)
+    # Calculate the width
+    sum_width = 0
+    #for j in range(len(board[0])//2, len(board[0])):  # Search down starting from the top of the board
+    #    for i in range(0, len(board)):  
+    #        if int(board[i][j]) > 0:  # Is the cell occupied?
+    #            for k in range(i, len(board)):
+    #                if int(board[k][j]) > 0:
+    #                    sum_width += 1
+    #                else:
+    #                    break
+    #            break
+    thresh = len(board[0])//3 * 2
+    for j in range(0, len(board[0])):  # Search down starting from the top of the board
+        for i in range(0, len(board)):  
+            if int(board[i][j]) > 0:  # Is the cell occupied?
+                if(j<thresh):
+                    sum_width -= 1.
+                else:
+                    sum_width += 1.5
     # Calculate the difference in heights
     for i in range(0, len(diffs)):
         diffs[i] = heights[i + 1] - heights[i]
 
     # Calculate the maximum height
-    max_height = max(heights)
+    global drop_block_cnt
 
     # Count the number of holes
     for i in range(0, len(board)):
@@ -291,9 +311,12 @@ def get_infos(board):
     height_sum = sum(heights)
 
     for i in diffs:
-        diff_sum += abs(i)
+        if abs(i) > 4:
+            diff_sum += abs(i)*3
+        else:
+            diff_sum += abs(i)
 
-    return height_sum, diff_sum, max_height, holes
+    return height_sum, diff_sum, max_height, holes, drop_block_cnt, sum_width
 
 class Piece(object):
     def __init__(self, _type, possible_shapes):
@@ -529,6 +552,8 @@ class Tetris(object):
         self.reset()
 
     def reset(self):
+        global drop_block_cnt 
+        drop_block_cnt = 0
         self.grid = deepcopy(self.o_grid)
 
         self.oldko = 0 # these two used to keep track of ko's
@@ -703,7 +728,7 @@ class Tetris(object):
     def natural_down(self):
         if self.LAST_NATRUAL_FALL_TIME >= NATRUAL_FALL_FREQ:
             if collideDown(self.grid, self.block, self.px, self.py) == False:
-                self.stopcounter = 0
+                # self.stopcounter = 0
                 # self.block.move_down()
                 self.py += 1
                 # pass
@@ -792,6 +817,8 @@ class Tetris(object):
             # self.stopcounter += 1
             if self.LAST_FALL_DOWN_TIME >= FALL_DOWN_FREQ:
                 self._is_fallen = 1
+                global drop_block_cnt
+                drop_block_cnt += 1
                 put_block_in_grid(self.grid, self.block, self.px, self.py)
                 # print("fallen")
 
@@ -820,7 +847,6 @@ class Tetris(object):
             scores = 0
         else:
             scores = cleared if cleared == 4 else cleared - 1
-
             # scores from combos
             if combo > 0:
                 if combo <= 8:
