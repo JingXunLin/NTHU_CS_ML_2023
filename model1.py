@@ -8,6 +8,20 @@ import torch.nn.functional as F
 from torch.distributions import Categorical
 from tqdm.notebook import tqdm
 
+#  CNN model
+class CNN(nn.Module):
+    #  input size = 20 *34
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(1, 16, 3, padding=1)
+        self.conv2 = nn.Conv2d(16, 32, 3, padding=1)
+        self.fc1 = nn.Linear(32 * 578, 578)
+
+    def forward(self, state):
+        hid = F.relu(self.conv1(state))
+        hid = F.relu(self.conv2(hid))
+        return F.relu(self.fc1(hid.view(hid.size(0), -1)))
+
 class ActorNetwork(nn.Module):
     def __init__(self):
         super().__init__()
@@ -47,7 +61,7 @@ class ActorCriticAgent():
         return self.actor(state), self.critic(state)
     def learn(self, log_probs, rewards, values):
         advantages = rewards - values
-
+        values = values.squeeze(1)
         loss_actor = (-log_probs * advantages).sum()
         loss_critic = F.smooth_l1_loss(values, rewards).sum()
 
@@ -70,6 +84,8 @@ actor = ActorNetwork()
 critic = CriticNetwork()
 #critic.load_state_dict(torch.load('critic_model'))
 agent = ActorCriticAgent(actor, critic)
+# CNN model for state representation
+cnn = CNN()
 
 # training  single mode
 env = TetrisSingleEnv(gridchoice="none", obs_type="grid", mode="human")
@@ -89,14 +105,14 @@ for batch in prg_bar:
     values = []
     # collect trajectory
     for episode in range(EPISODE_PER_BATCH):
+        state = cnn(torch.FloatTensor(env.reset()[:][:17].reshape(1, 1, 17, 34)))
 
-        state = env.reset()[:][:17].flatten()
         total_reward, total_step = 0, 0
         seq_rewards = []
         while True:
             action, log_prob = agent.sample(state) # at, log(at|st)
             next_state, reward, done, _ = env.step(action)
-            next_state = next_state[:][:17].flatten()
+            next_state = cnn(torch.FloatTensor(next_state[:][:17].reshape(1, 1, 17, 34)))
 
             log_probs.append(log_prob) # [log(a1|s1), log(a2|s2), ...., log(at|st)]
             values.append(agent.critic(torch.FloatTensor(state)))
