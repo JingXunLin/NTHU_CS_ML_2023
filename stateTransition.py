@@ -8,14 +8,19 @@ from copy import deepcopy
 
 from TetrisManager import TetrisSaver
 import numpy as np
+import random
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.distributions import Categorical
 from TetrisBattle.settings import *
+import numpy as np
 from gym_tetris.ai.QNetwork import QNetwork
 #from tqdm.notebook import tqdm
+
+import hashlib
+import pickle
 
 EPISODE = 100
 
@@ -185,6 +190,7 @@ def TetrisMove(tetris, action, com_event, last_infos):
     for evt in com_event.get():
         tetris.trigger(evt)
 
+    tetris.increment_timer()
     tetris.move()
     tetris.check_fallen()
     if tetris.is_fallen:
@@ -204,9 +210,10 @@ def TetrisMove(tetris, action, com_event, last_infos):
     return infos
 
 def move(tetris, requireAct, last_infos):
+    # print("RA:", requireAct)
     lastX = tetris.px
     com_event = ComEvent()
-    for i in range(requireAct[1]):
+    for _ in range(requireAct[1]):
         TetrisMove(tetris, 3, com_event, last_infos)
     infos = None
     while True:
@@ -218,6 +225,7 @@ def move(tetris, requireAct, last_infos):
             coords_buffer.append({"px":tetris.px,"py":tetris.py})
             infos = TetrisMove(tetris, 2, com_event, last_infos)
             break
+        # print("pX:", lastX, tetris.px)
         if tetris.px == lastX:
             return False, []
         lastX = tetris.px
@@ -236,13 +244,17 @@ def get_predict(network, env):
     tetris = player["tetris"]
     ts = TetrisSaver()
     ts.save(tetris)
-    for x in range(-2, 9):
-        for ro in range(4):
-            newTetris = Tetris(Player(player["info_dict"]), "none")
-            ts.load(newTetris)
+    for ro in range(0,4):
+        for x in range(-2, 9):
+            newTetris = deepcopy(tetris)
+            # ts.load(newTetris)
+
             success, simState= move(newTetris, (x, ro), env.game_interface.last_infos)
             if success:
                 obs.append([(x, ro), simState])
+    obs.sort(key=lambda x:(x[0][1], x[0][0]))
+    obs = np.array(obs)
+    print(obs)
     action, state = network.act(obs)
     NATRUAL_FALL_FREQ = tmp
     return action
@@ -251,7 +263,7 @@ if __name__ == "__main__":
     network = QNetwork(discount=1, epsilon=0, epsilon_min=0, epsilon_decay=0)
     network.load()
     env = TetrisSingleEnv(gridchoice="none", obs_type="grid", mode="human") # env: gym environment for Tetris
-
+    random.seed(50)
     action_meaning_table = env.get_action_meanings() # meaning of action number
 
     ob = env.reset() # ob: current map depends on obs type(image: return ndarray of pixels of screen; grid: return information (20, 34) grid) (note that originally is (20, 34, 1) )
@@ -278,8 +290,8 @@ if __name__ == "__main__":
         player = env.game_interface.tetris_list[env.game_interface.now_player]
         tetris = player["tetris"]
         print("px:",tetris.px,"py:",tetris.py)
-        # action = int(input())
         print(predict)
+        action = input()
         #print("action:", action_meaning_table[action]) # action chosen
         for i in range(predict[1]):
             ob, reward, done, infos = env.step(3)
