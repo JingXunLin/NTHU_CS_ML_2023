@@ -78,8 +78,8 @@ class TetrisState():
         states['Eroded_piece_cells'] = eroded_piece_cells
         states['Aggregate_height'] = self.get_aggregate_height()
         
-        return [states["Holes"], states["Landing_height"], states["Eroded_piece_cells"], states["Row_transitions"], states["Column_transitions"], states["Cumulative_wells"],
-                states["Bumpiness"], states["Aggregate_height"], states["Rows_cleared"]]
+        return [states["Rows_cleared"], states["Bumpiness"], states["Holes"], states["Landing_height"], states["Row_transitions"], states["Column_transitions"],
+                states["Cumulative_wells"], states["Eroded_piece_cells"], states["Aggregate_height"]]
     
     def get_possible_states(self,infos):
         
