@@ -64,7 +64,7 @@ def do_action(action, env, tetris):
     tetris.block.current_shape_id = action[1]
     tetris.px = action[0]
     _, reward, done, infos = env.step(0)
-    assert(tetris.px == action[0])
+    #assert(tetris.px == action[0])
     while infos['is_fallen'] == 0:
         _, reward, done, infos = env.step(2)
     return _, reward, done, infos
@@ -163,8 +163,6 @@ def train(opt):
 
         if epoch > 0 and epoch % opt.save_interval == 0:
             torch.save(model.state_dict(), 'model_state')
-
-
 if __name__ == "__main__":
     opt = get_args()
     train(opt)

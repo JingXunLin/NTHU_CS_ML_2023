@@ -58,7 +58,7 @@ def get_board(tetris):
     b = block.now_block()
 
     for i in range(len(tetris.grid)):
-        return_grids[i] = np.array(tetris.grid[i][excess:GRID_DEPTH], dtype=np.float32)
+        return_grids[i] = np.array(tetris.grid[i][excess:GRID_DEPTH+excess], dtype=np.float32)
     return_grids[return_grids > 0] = 1
 
     add_y = hardDrop(tetris.grid, tetris.block, tetris.px, tetris.py)

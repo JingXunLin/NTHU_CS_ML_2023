@@ -1,37 +1,70 @@
-from TetrisBattle.envs.tetris_env import TetrisSingleEnv
+from TetrisBattle.envs.tetris_env import TetrisDoubleEnv
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torch.nn.functional as F
+from TetrisBattle.getState import *
 
+class DeepQNetwork(nn.Module):
+    def __init__(self):
+        super(DeepQNetwork, self).__init__()
+
+        self.conv1 = nn.Sequential(nn.Linear(4, 64), nn.ReLU(inplace=True))
+        self.conv2 = nn.Sequential(nn.Linear(64, 64), nn.ReLU(inplace=True))
+        self.conv3 = nn.Sequential(nn.Linear(64, 1))
+
+        self._create_weights()
+
+    def _create_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)
+                nn.init.constant_(m.bias, 0)
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.conv2(x)
+        x = self.conv3(x)
+
+        return x
+def do_action(action, env, tetris):
+    #ret_done = False
+    tetris.block.current_shape_id = action[1]
+    tetris.px = action[0]
+    _, reward, done, infos = env.step(0)
+    #print(infos)
+    #assert(tetris.px == action[0])
+    #while infos['is_fallen'] == 0:
+    _, reward, done, infos = env.step(2)
+    return _, reward, done, infos
 
 if __name__ == "__main__":
 
-    env = TetrisSingleEnv(gridchoice="none", obs_type="grid", mode="rgb_array") # env: gym environment for Tetris
-
-    action_meaning_table = env.get_action_meanings() # meaning of action number
-
-    ob = env.reset() # ob: current map depends on obs type(inage: return ndarray of pixels of screen; grid: return information (20, 34) grid) (note that originally is (20, 34, 1) )
-    # information grid: (see grid explain.png)
-    # now table: 0.3 ghost block, 0.7 real block
-    # hold block: the i-th entry is 1 means hold block type is i
-    # next block: for j-th row, the i-th entry is 1 means j-th next block type is i
-    # other infos: 
-    # 0-th: self.sent / 100
-    # 1-th: self.combo / 10
-    # 2-th: self.pre_back2back
-    # 3-th: self._attacked / GRID_DEPTH
-
-    for i in range(1):
-
-        env.take_turns() # change player in interface
-
-        action = env.random_action() # chose action number (meaning of it is said in line 8 list)
-        print("action:", action_meaning_table[action]) # action chosen
-
-        ob, reward, done, infos = env.step(action) # execute action we chose in game interface and get now status information and reward
-        # infos: please refer to tetris_interface -> act method
-
-        print("reward:", reward) # reward gain
-
-        if len(infos) != 0: # if end, info["episode"] will tell accumulated rewards
-            print(infos)
+    env = TetrisDoubleEnv(gridchoice="none", obs_type="grid", mode="human") # env: gym environment for Tetris
+    model1 = DeepQNetwork()
+    model1.load_state_dict(torch.load('tetris'))
+    tetris1 = env.game_interface.tetris_list[0]["tetris"]
+    model2 = DeepQNetwork()
+    model2.load_state_dict(torch.load('tetris'))
+    tetris2 = env.game_interface.tetris_list[1]["tetris"]
+    env.reset()
+    while True:
+        if env.game_interface.now_player == 0:
+            tetris = tetris1
+        else:
+            tetris = tetris2
+        next_steps = get_next_states(tetris)
+        next_actions, next_states = zip(*next_steps.items())
+        next_states = torch.tensor(next_states,dtype=torch.float)
+        if env.game_interface.now_player == 0:
+            predictions = model1(next_states)[:, 0]
+        else:
+            predictions = model2(next_states)[:, 0]
+        
+        index = torch.argmax(predictions).item()
+        action = next_actions[index]
+        _, reward, done, infos  = do_action(action, env, tetris)
 
         if done:
-            ob = env.reset() # if end, info["episode"] will tell accumulated rewards
+            break
+        env.take_turns()
