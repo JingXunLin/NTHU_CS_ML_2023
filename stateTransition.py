@@ -1,16 +1,26 @@
 from TetrisBattle.envs.tetris_env import TetrisSingleEnv
 from TetrisBattle.tetris import Tetris, get_infos, Piece, Buffer, hardDrop, rotateCollide, collideDown, collide, rotate
 from TetrisBattle.envs.tetris_interface import TetrisSingleInterface, TetrisDoubleInterface
+from TetrisBattle.tetris import Tetris
+from TetrisBattle.tetris import Player
+from TetrisBattle.envs.tetris_interface import ComEvent
 from copy import deepcopy
 
-
+from TetrisManager import TetrisSaver
 import numpy as np
+import random
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.distributions import Categorical
+from TetrisBattle.settings import *
+import numpy as np
+from gym_tetris.ai.QNetwork import QNetwork
 #from tqdm.notebook import tqdm
+
+import hashlib
+import pickle
 
 EPISODE = 100
 
@@ -25,8 +35,8 @@ class TetrisState():
         self.cols = len(self.board)
         self.rows = len(self.board[0])
         self.buffer = tetris.buffer
-        self.last_piece = None
-        self.piece = None #new
+        # self.last_piece = None
+        # self.piece = None #new
         self.coords = coords
     '''
     def get_org_infos(self,action):
@@ -68,26 +78,26 @@ class TetrisState():
         states['Eroded_piece_cells'] = eroded_piece_cells
         states['Aggregate_height'] = self.get_aggregate_height()
         
-        return states
+        return [states["Rows_cleared"], states["Bumpiness"], states["Holes"], states["Landing_height"], states["Row_transitions"], states["Column_transitions"],
+                states["Cumulative_wells"], states["Eroded_piece_cells"], states["Aggregate_height"]]
     
     def get_possible_states(self,infos):
         
-        if len(self.buffer.next_list) > 1: #Otherwise might pop empty list
-            self.last_piece = self.buffer.new_block()
-            self.piece = self.buffer.next_list[0] #new
+        # if len(self.buffer.next_list) > 1: #Otherwise might pop empty list
+        #     self.last_piece = self.buffer.new_block()
+        #     self.piece = self.buffer.next_list[0] #new
         
-        if self.piece is None:
-            return []
+        # if self.piece is None:
+        #     return []
         
         states = []
         #temporary code:
         rows_cleared = self.get_cleared_rows()
-        states.append(((0,0), self.get_state(infos, rows_cleared)))
         '''
         TODO
         '''
                 
-        return states
+        return self.get_state(infos, rows_cleared)
     
     def is_row(self, y):
         """Returns if the row is a fully filled one."""
@@ -173,11 +183,87 @@ class TetrisState():
                     aggregate_height += self.rows - y
                     break
         return aggregate_height
-    
+
+
+def TetrisMove(tetris, action, com_event, last_infos):
+    com_event.set([action])
+    for evt in com_event.get():
+        tetris.trigger(evt)
+
+    tetris.increment_timer()
+    tetris.move()
+    tetris.check_fallen()
+    if tetris.is_fallen:
+        tetris.clear()
+        tetris.new_block()
+    tetris.increment_timer()
+    infos = {'is_fallen': tetris.is_fallen}
+
+    if tetris.is_fallen:
+        height_sum, diff_sum, max_height, holes = get_infos(tetris.get_board())
+
+        # store the different of each information due to the move
+        infos['diff_sum'] =  diff_sum - last_infos['diff_sum']
+        infos['holes'] =  holes - last_infos['holes'] 
+        infos['is_fallen'] =  tetris.is_fallen 
+        infos['cleared'] =  tetris.cleared
+    return infos
+
+def move(tetris, requireAct, last_infos):
+    # print("RA:", requireAct)
+    lastX = tetris.px
+    com_event = ComEvent()
+    for _ in range(requireAct[1]):
+        TetrisMove(tetris, 3, com_event, last_infos)
+    infos = None
+    while True:
+        if tetris.px > requireAct[0]:
+            TetrisMove(tetris, 6, com_event, last_infos)
+        elif tetris.px < requireAct[0]:
+            TetrisMove(tetris, 5, com_event, last_infos)
+        else:
+            coords_buffer.append({"px":tetris.px,"py":tetris.py})
+            infos = TetrisMove(tetris, 2, com_event, last_infos)
+            break
+        # print("pX:", lastX, tetris.px)
+        if tetris.px == lastX:
+            return False, []
+        lastX = tetris.px
+    test = TetrisState(tetris, tetris.get_board(),coords_buffer.pop())
+    testStates = test.get_possible_states(infos)
+    # print("infos:",infos)
+    # if len(testStates) != 0: print(testStates) 
+    return True, testStates
+
+def get_predict(network, env):
+    obs = []
+    global NATRUAL_FALL_FREQ
+    tmp = NATRUAL_FALL_FREQ
+    NATRUAL_FALL_FREQ = 100
+    player = env.game_interface.tetris_list[env.game_interface.now_player]
+    tetris = player["tetris"]
+    ts = TetrisSaver()
+    ts.save(tetris)
+    for ro in range(0,4):
+        for x in range(-2, 9):
+            newTetris = deepcopy(tetris)
+            # ts.load(newTetris)
+
+            success, simState= move(newTetris, (x, ro), env.game_interface.last_infos)
+            if success:
+                obs.append([(x, ro), simState])
+    obs.sort(key=lambda x:(x[0][1], x[0][0]))
+    obs = np.array(obs)
+    print(obs)
+    action, state = network.act(obs)
+    NATRUAL_FALL_FREQ = tmp
+    return action
+
 if __name__ == "__main__":
-
+    network = QNetwork(discount=1, epsilon=0, epsilon_min=0, epsilon_decay=0)
+    network.load()
     env = TetrisSingleEnv(gridchoice="none", obs_type="grid", mode="human") # env: gym environment for Tetris
-
+    random.seed(50)
     action_meaning_table = env.get_action_meanings() # meaning of action number
 
     ob = env.reset() # ob: current map depends on obs type(image: return ndarray of pixels of screen; grid: return information (20, 34) grid) (note that originally is (20, 34, 1) )
@@ -185,29 +271,50 @@ if __name__ == "__main__":
     coords_buffer = []
 
     for i in range(EPISODE):
-
-        #env.take_turns() # change player in interface
-
-        action = env.random_action() # chose action number (meaning of it is said in line 8 list)
-        #print("action:", action_meaning_table[action]) # action chosen
-
-        ob, reward, done, infos = env.step(action) # execute action we chose in game interface and get now status information and reward
+        # action_meaning = {
+        #     0: "NOOP",
+        #     1: "hold",
+        #     2: "drop",
+        #     3: "rotate_right",
+        #     4: "rotate_left",
+        #     5: "right",
+        #     6: "left",
+        #     7: "down" 
+        # }
+        ### Predict
         # infos: please refer to tetris_interface -> act method
+          
         
+        ###
+        predict = get_predict(network, env)
         player = env.game_interface.tetris_list[env.game_interface.now_player]
         tetris = player["tetris"]
-        
         print("px:",tetris.px,"py:",tetris.py)
+        print(predict)
+        action = input()
+        #print("action:", action_meaning_table[action]) # action chosen
+        for i in range(predict[1]):
+            ob, reward, done, infos = env.step(3)
+        while True:
+            if tetris.px > predict[0]:
+                ob, reward, done, infos = env.step(6)
+            elif tetris.px < predict[0]:
+                ob, reward, done, infos = env.step(5)
+            else:
+                ob, reward, done, infos = env.step(2)
+                break
+
+        # ob, reward, done, infos = env.step(action) # execute action we chose in game interface and get now status information and reward
         
         #print states and infos
-        if infos['is_fallen']==0: 
-            coords_buffer.append({"px":tetris.px,"py":tetris.py})
-        else: 
-            test = TetrisState(tetris, tetris.get_board(),coords_buffer.pop())
-            testStates = test.get_possible_states(infos)
-            print("infos:",infos)
-            if len(testStates) != 0: print(testStates)    
-        
+        # if infos['is_fallen']==0: 
+        #     coords_buffer.append({"px":tetris.px,"py":tetris.py})
+        # else: 
+        #     test = TetrisState(tetris, tetris.get_board(),coords_buffer.pop())
+        #     testStates = test.get_possible_states(infos)
+        #     print("infos:",infos)
+        #     if len(testStates) != 0: print(testStates) 
+         
         
         if done:
             ob = env.reset() # if end, info["episode"] will tell accumulated rewards
