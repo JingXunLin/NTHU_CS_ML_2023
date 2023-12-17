@@ -43,7 +43,7 @@ class TetrisEnv(gym.Env, abc.ABC):
             self.observation_space = spaces.Box(low=0, high=255, 
                 shape=self.game_interface.screen_size() + [3], dtype=np.uint8)
         elif obs_type == "grid":
-            self.observation_space = spaces.Box(low=0, high=1, 
+            self.observation_space = spaces.Box(low=-1, high=1, 
                 shape=list(self.game_interface.get_seen_grid().shape), dtype=np.float32)
 
         self.reset()
@@ -116,7 +116,7 @@ class TetrisSingleEnv(TetrisEnv):
         #     reward -= infos['max_height'] / 30 / 1000
 
         #     reward -= infos['holes'] / 20 / 1000
-
+        end = bool(end)
         return ob, reward, end, infos
 
 class TetrisDoubleEnv(TetrisEnv):
