@@ -64,13 +64,13 @@ class TetrisState():
         landing_height = 0
         
         
-        if infos['is_fallen']:
+        if self.tetris.is_fallen:
             landing_height = self.rows - self.coords['py']
-            #eroded_piece_cells = infos['cleared'] * sum(y in rows_cleared for x, y in self.last_piece.return_pos(self.coords['px'], self.coords['py']))   
+            eroded_piece_cells = self.tetris.cleared #TO fix    
             
-        states['Rows_cleared'] = infos['cleared']
-        states['Bumpiness'] = infos['diff_sum']
-        states['Holes'] = infos['holes']
+        states['Rows_cleared'] = self.tetris.cleared
+        states['Bumpiness'] = self.get_bumpiness()
+        states['Holes'] = self.get_hole_count()
         states['Landing_height'] = landing_height
         states['Row_transitions'] = self.get_row_transitions()
         states['Column_transitions'] = self.get_column_transitions()
@@ -117,6 +117,36 @@ class TetrisState():
     def get_cleared_rows(self):
         """Returns the the amount of rows cleared."""
         return list(filter(lambda y: self.is_row(y), range(self.rows)))
+    
+    def get_bumpiness(self):
+        """Returns the total of the difference between the height of each column."""
+        bumpiness = 0
+        last_height = -1
+        for x in range(self.cols):
+            current_height = 0
+            for y in range(self.rows):
+                if self.board[x][y] != 0:
+                    current_height = self.rows - y
+                    break
+            if last_height != -1:
+                bumpiness += abs(last_height - current_height)
+            last_height = current_height
+        return bumpiness
+
+    
+    def get_hole_count(self):
+        """returns the number of empty cells covered by a full cell."""
+        hole_count = 0
+        for x in range(self.cols):
+            below = False
+            for y in range(self.rows):
+                empty = self.board[x][y] == 0
+                if not below and not empty:
+                    below = True
+                elif below and empty:
+                    hole_count += 1
+
+        return hole_count
     
     def get_row_transitions(self):
         """Returns the number of horizontal cell transitions."""
