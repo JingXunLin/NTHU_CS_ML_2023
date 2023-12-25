@@ -91,7 +91,7 @@ def train(opt):
         model.cuda()
         state = state.cuda()
 
-    replay_memory = deque(maxlen=opt.replay_memory_size)
+    replay_memory = deque(maxlen=opt.replay_memory_size)AttributeError: 'list' object has no attribute 'cuda'
     epoch = 2000
     rewards = []
     while epoch < opt.num_epochs:

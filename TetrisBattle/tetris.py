@@ -671,7 +671,9 @@ class Tetris(object):
         # b = block.now_block()
 
         for i in range(len(self.grid)):
-            return_grids[i] = np.array(self.grid[i][excess:GRID_DEPTH], dtype=np.float32)
+            zeros_to_insert = np.zeros(excess)
+            return_grids[i] = np.concatenate((zeros_to_insert, np.array(self.grid[i][excess:GRID_DEPTH], dtype=np.float32)))
+            # return_grids[i] = np.array(self.grid[i][excess:GRID_DEPTH], dtype=np.float32)
         return_grids[return_grids > 0] = 1
         # for x in range(BLOCK_WIDTH):
         #     for y in range(BLOCK_LENGTH):

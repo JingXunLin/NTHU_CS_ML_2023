@@ -6,6 +6,7 @@ from TetrisBattle.tetris import Player
 from TetrisBattle.envs.tetris_interface import ComEvent
 from copy import deepcopy
 
+import time
 from TetrisManager import TetrisSaver
 import numpy as np
 import random
@@ -254,14 +255,35 @@ def get_predict(network, env):
                 obs.append([(x, ro), simState])
     obs.sort(key=lambda x:(x[0][1], x[0][0]))
     obs = np.array(obs)
-    print(obs)
     action, state = network.act(obs)
     NATRUAL_FALL_FREQ = tmp
     return action
 
+network = QNetwork(discount=1, epsilon=0, epsilon_min=0, epsilon_decay=0)
+network.load()
+coords_buffer = []
+def DQN_do_action(env):
+    global network
+    predict = get_predict(network, env)
+    player = env.game_interface.tetris_list[env.game_interface.now_player]
+    tetris = player["tetris"]
+    ob = None
+    reward = None 
+    done = None 
+    infos = None
+    for i in range(predict[1]):
+        ob, reward, done, infos = env.step(3)
+    while True:
+        if tetris.px > predict[0]:
+            ob, reward, done, infos = env.step(6)
+        elif tetris.px < predict[0]:
+            ob, reward, done, infos = env.step(5)
+        else:
+            ob, reward, done, infos = env.step(2)
+            break
+    return ob, reward, done, infos
+
 if __name__ == "__main__":
-    network = QNetwork(discount=1, epsilon=0, epsilon_min=0, epsilon_decay=0)
-    network.load()
     env = TetrisSingleEnv(gridchoice="none", obs_type="grid", mode="human") # env: gym environment for Tetris
     random.seed(50)
     action_meaning_table = env.get_action_meanings() # meaning of action number
@@ -269,30 +291,12 @@ if __name__ == "__main__":
     ob = env.reset() # ob: current map depends on obs type(image: return ndarray of pixels of screen; grid: return information (20, 34) grid) (note that originally is (20, 34, 1) )
     
     coords_buffer = []
-
-    for i in range(EPISODE):
-        # action_meaning = {
-        #     0: "NOOP",
-        #     1: "hold",
-        #     2: "drop",
-        #     3: "rotate_right",
-        #     4: "rotate_left",
-        #     5: "right",
-        #     6: "left",
-        #     7: "down" 
-        # }
-        ### Predict
-        # infos: please refer to tetris_interface -> act method
-          
-        
-        ###
+    done = False
+    input()
+    while not done:
         predict = get_predict(network, env)
         player = env.game_interface.tetris_list[env.game_interface.now_player]
         tetris = player["tetris"]
-        print("px:",tetris.px,"py:",tetris.py)
-        print(predict)
-        action = input()
-        #print("action:", action_meaning_table[action]) # action chosen
         for i in range(predict[1]):
             ob, reward, done, infos = env.step(3)
         while True:
@@ -303,19 +307,6 @@ if __name__ == "__main__":
             else:
                 ob, reward, done, infos = env.step(2)
                 break
-
-        # ob, reward, done, infos = env.step(action) # execute action we chose in game interface and get now status information and reward
-        
-        #print states and infos
-        # if infos['is_fallen']==0: 
-        #     coords_buffer.append({"px":tetris.px,"py":tetris.py})
-        # else: 
-        #     test = TetrisState(tetris, tetris.get_board(),coords_buffer.pop())
-        #     testStates = test.get_possible_states(infos)
-        #     print("infos:",infos)
-        #     if len(testStates) != 0: print(testStates) 
-         
         
         if done:
             ob = env.reset() # if end, info["episode"] will tell accumulated rewards
-    
