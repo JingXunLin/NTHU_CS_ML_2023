@@ -31,7 +31,7 @@ def do_action(action, env, tetris):
     #ret_done = False
     tetris.block.current_shape_id = action[1]
     tetris.px = action[0]
-    _, reward, done, infos = env.step(0)
+    # _, reward, done, infos = env.step(0)
     #print(infos)
     #assert(tetris.px == action[0])
     #while infos['is_fallen'] == 0:
