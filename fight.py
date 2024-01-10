@@ -1,6 +1,5 @@
 from TetrisBattle.envs.tetris_env import TetrisDoubleEnv,TetrisSingleEnv
 from Group37_model import *
-from stateTransition import *
 
 if __name__ == "__main__":
     #env = TetrisSingleEnv(gridchoice="none", obs_type="grid", mode="human")
@@ -9,8 +8,9 @@ if __name__ == "__main__":
     tetris1 = env.game_interface.tetris_list[0]["tetris"]
     model2 = DeepQNetwork()
     tetris2 = env.game_interface.tetris_list[1]["tetris"]
-    input()
+    #input()
     env.reset()
+    print(env.game_interface.now_player)
     while True:
         tetris = env.game_interface.tetris_list[env.game_interface.now_player]["tetris"]
 
@@ -18,8 +18,9 @@ if __name__ == "__main__":
         next_actions, next_states = zip(*next_states.items())
         next_states = torch.tensor(next_states,dtype=torch.float)
         if env.game_interface.now_player == 0:
-            # predictions = model1(next_states)[:, 0]
-            _, reward, done, infos  = DQN_do_action(env)
+            predictions = model1(next_states)[:, 0]
+            #_, reward, done, infos  = DQN_do_action(env)
+            done = 0
         else:
             predictions = model2(next_states)[:, 0]
             index = torch.argmax(predictions).item()
