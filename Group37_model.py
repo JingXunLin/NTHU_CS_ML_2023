@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-from TetrisBattle.getState import *
+# from TetrisBattle.getState import *
 
 def get_pos(tetris):
     return tetris.px, tetris.py
@@ -92,25 +92,37 @@ def hardDrop(grid, block, px, py):
 
 def get_next_states(tetris):
     states = {}
-    org_px, org_py = get_pos(tetris)
-    piece_id = tetris.block.block_type()
-    if piece_id == 'O':  # O piece
-        num_rotations = 1
-    elif piece_id == 'S' or piece_id == 'I' or piece_id == 'Z':
-        num_rotations = 2
+
+    if tetris.held is not None:
+        for hold in [False, True]:
+            org_px, org_py = get_pos(tetris)
+            if hold:
+                piece_id = tetris.held
+            else:
+                piece_id = tetris.block.block_type()
+
+            if piece_id == 'O':  # O piece
+                num_rotations = 1
+            elif piece_id == 'S' or piece_id == 'I' or piece_id == 'Z':
+                num_rotations = 2
+            else:
+                num_rotations = 4
+
+            for i in range(num_rotations):
+                tetris.block.rotate()
+                tetris.py = 0
+                for x in range(-2, 10, 1):
+                    tetris.px = x
+                    tetris.py = hardDrop(tetris.grid, tetris.block, x, 0)
+                    board = get_board(tetris)
+                    if board is not None:
+                        states[(x, tetris.block.current_shape_id, hold)] = get_infos(board)
+            tetris.px, tetris.py = org_px, org_py
     else:
-        num_rotations = 4
-    for i in range(num_rotations):
-        tetris.block.rotate()
-        tetris.py = 0
-        for x in range(-2, 10, 1):
-            tetris.px = x
-            tetris.py = hardDrop(tetris.grid, tetris.block, x, 0)
-            board = get_board(tetris)
-            if board is not None:
-                states[(x, tetris.block.current_shape_id)] = get_infos(board)
-    tetris.px, tetris.py = org_px, org_py
+        board = get_board(tetris)
+        states[(0, 0, 1)] = get_infos(board)
     return states
+
 class DeepQNetwork(nn.Module):
     def __init__(self):
         super(DeepQNetwork, self).__init__()
@@ -135,6 +147,12 @@ class DeepQNetwork(nn.Module):
         return x
 def do_action(action, env, tetris):
     #ret_done = False
+    if action[2] == 1:
+        player=env.game_interface.tetris_list[env.game_interface.now_player]
+        com_event = player["com_event"]
+        com_event.set([1])
+        for evt in com_event.get():
+            tetris.trigger(evt)
     tetris.block.current_shape_id = action[1]
     tetris.px = action[0]
     _, reward, done, infos = env.step(0)
